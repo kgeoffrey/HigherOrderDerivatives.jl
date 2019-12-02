@@ -62,7 +62,6 @@ function chain(x::DualandReal, n::Int)
     end
 end
 
-
 function dechain(x::DualandReal)
     if x isa Real
         return x
@@ -70,7 +69,6 @@ function dechain(x::DualandReal)
         return dechain(x.g[1])
     end
 end
-
 
 function derivative(f::Function, x::Real, n::Int)
     return dechain(f(chain(x,n)))

@@ -1,10 +1,11 @@
-### simple Automatic Differentiation with Dual Numbers
+### defining diff. rules for Dual numbers ###
 using Distributions, LinearAlgebra
 
 struct Dual{T} <: Number
     f::Union{T, Dual}
     g::Union{T, AbstractArray}
 end
+
 DualandReal = Union{Dual, Real}
 
 ### Differentiation rules via overloading ###
@@ -28,6 +29,11 @@ import Base: +,/,*,-,^, convert, promote_rule
 Base.exp(x::Dual) = Dual(exp(x.f), x.g * exp(x.f))
 Base.sqrt(x::Dual) = Dual(sqrt(x.f), x.g / (2 * sqrt(x.f)))
 Base.log(x::Dual) = Dual(log(x.f), x.g/x.f)
+
+Base.sin(x::Dual) = Dual(sin(x.f), cos(x.f)*x.g)
+Base.cos(x::Dual) = Dual(cos(x.f), -sin(x.f)*x.g)
+Base.tan(x::Dual) = Dual(tan(x.f), (sec(x.f)^2)*x.g)
+
 Distributions.cdf(d, x::Dual) = Dual(cdf(d, x.f), pdf(d, x.f) * x.g)
 Base.adjoint(x::Dual) = Dual(adjoint(x.f), adjoint(x.g))
 LinearAlgebra.dot(x::Dual, y::Dual) = Dual(dot(x.f,y.f), x.f * y.g + y.f * x.g)
@@ -50,7 +56,8 @@ function DualArray(x)
     return collect
 end
 
-### Recursive functions for getting the derivativ  ###
+
+### Recursive functions for getting derivatives ###
 function chain(x::DualandReal, n::Int)
     dualone = one(x)
     if n == 1

@@ -1,0 +1,4 @@
+name = "HigherOrderDerivatives"
+uuid = "c8fd0db2-566d-4870-b0fd-1c038e266d70"
+authors = ["Geoffrey Kasebacher <gkasenbacher@gmail.com>"]
+version = "0.1.0"

@@ -10,7 +10,6 @@ DualandReal = Union{Dual, Real}
 ### Differentiation rules via overloading ###
 import Base: +,/,*,-,^,adjoint, convert, promote_rule
 import Base: +,/,*,-,^, convert, promote_rule
-
 +(x::Dual, y::Dual) = Dual(x.f + y.f, x.g + y.g)
 +(x::Dual, y::Real) = Dual(x.f + y, x.g)
 +(y::Real, x::Dual) = Dual(x.f + y, x.g)
@@ -50,7 +49,6 @@ function DualArray(x)
     end
     return collect
 end
-
 
 ### Recursive functions for getting the derivativ  ###
 function chain(x::DualandReal, n::Int)

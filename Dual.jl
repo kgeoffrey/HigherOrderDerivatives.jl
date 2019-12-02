@@ -33,7 +33,7 @@ Distributions.cdf(d, x::Dual) = Dual(cdf(d, x.f), pdf(d, x.f) * x.g)
 Base.adjoint(x::Dual) = Dual(adjoint(x.f), adjoint(x.g))
 LinearAlgebra.dot(x::Dual, y::Dual) = Dual(dot(x.f,y.f), x.f * y.g + y.f * x.g)
 Base.zero(x::Dual) = Dual(zero(x.f), zero(x.g))
-
+Base.one(x::Dual) = one(x.f)
 ### conversion, promotion rules ###
 convert(::Type{Dual}, x::Real) = Dual(x, one(x))
 convert(::Type{Dual}, x::AbstractArray) = DualArray(x)
@@ -54,10 +54,11 @@ end
 
 ### Recursive functions for getting the derivativ  ###
 function chain(x::DualandReal, n::Int)
+    dualone = one(x)
     if n == 1
-        return Dual(x, 1)
+        return Dual(x, dualone)
     else
-        return chain(Dual(x, 1), n-1)
+        return chain(Dual(x, dualone), n-1)
     end
 end
 
@@ -66,11 +67,15 @@ function dechain(x::DualandReal)
     if x isa Real
         return x
     else
-        dechain(x.g[1])
+        return dechain(x.g[1])
     end
 end
 
 
 function derivative(f::Function, x::Real, n::Int)
     return dechain(f(chain(x,n)))
+end
+
+function derivative(f::Function, x::Real)
+    return dechain(f(chain(x,1)))
 end

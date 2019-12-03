@@ -1,7 +1,11 @@
 # HigherOrderDerivatives
 Automatic higher order differentiation of generic julia Functions via dual numbers. 
 
-Example:
+Install the package by using the Julia package manager:
+```julia
+Pkg.add("HigherOrderDerivatives")
+```
+## Example:
 
 ```julia
 julia> using HigherOrderDerivatives

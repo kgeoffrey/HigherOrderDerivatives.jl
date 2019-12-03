@@ -10,7 +10,7 @@ Pkg.add("HigherOrderDerivatives")
 ```julia
 julia> using HigherOrderDerivatives
 
-julia> f(x::Real) = x^3 * cos(-x)^2 * sin(x);
+julia> f(x::Real) = exp(x^3 * cos(-x)^2 * sin(x));
 
 julia> D = x -> derivative(f, x); # gives first derivative
 julia> D⁹ = x -> derivative(f, x, 9); # gives 9th derivative 

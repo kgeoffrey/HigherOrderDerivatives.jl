@@ -49,6 +49,7 @@ convert(::Type{Dual}, x::Real) = Dual(x, one(x))
 convert(::Type{Dual}, x::AbstractArray) = DualArray(x)
 convert(::Type{Array}, x::Real) = [x]
 Dual(x) = convert(Dual, x)
+Dual(x::Dual) = Dual(x, one(x.f))
 promote_rule(::Type{Dual}, ::Type{<:Number}) = Dual
 
 function DualArray(x::AbstractArray)
@@ -88,10 +89,6 @@ function dechain(x::DualandReal)
     end
 end
 
-########
-
-
-
 function dechain(x::DualRealArray, dim::Int)
     if x isa Dual
         return dechain(getfield(x, :g), dim)
@@ -111,34 +108,24 @@ function dechain(x::DualRealArray, dim::Int)
 end
 
 
-########
-
-function derivative(f::Function, x::DualRealArray, n::Int)
-    return dechain(f(chain(x,n)))
-end
-
-function derivative(f::Function, x::DualRealArray)
-    return dechain(f(chain(x,1)))
-end
-
-function gradient(f::Function, x::AbstractArray)
-    return dechain(f(chain(x,1)), 1)
-end
-
-function gradient(f::Function, x::AbstractArray, n::Int)
-    return dechain(f(chain(x, n)), n)
-end
-
-function hessian(f::Function, x::AbstractArray)
-    return dechain(f(chain(x, 2)))
-end
+derivative(f::Function, x::DualandReal, n::Int) = dechain(f.(chain([x],n)), 1)[1]
+derivative(f::Function, x::DualandReal) = dechain(f.(chain([x],1)), 1)[1]
+gradient(f::Function, x::AbstractArray) = dechain(f(chain(x,1)), 1)
+gradient(f::Function, x::AbstractArray, n::Int) = dechain(f(chain(x, n)), n)
+hessian(f::Function, x::AbstractArray) = dechain(f(chain(x, 2)))
 
 
-### to do: change gradient function and DualArray functions (with gradients no support yet)
+
 
 t = rand(4)
 f(t) = exp(t'*t)
+g(x) = exp(x*2)
 
 
 
-p = gradient(f, t, 4)
+gradient(f, t, 5)
+
+@time derivative(g, 3, 4)
+
+ForwardDiff.hessian(f, t)
+# Dual(Dual(3), 1) fix Dual numbers next!

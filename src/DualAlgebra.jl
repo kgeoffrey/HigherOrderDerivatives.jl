@@ -88,17 +88,28 @@ function dechain(x::DualandReal)
     end
 end
 
-function dechain(x::AbstractArray)
-    if eltype(x) <: Real
+########
+
+
+
+function dechain(x::DualRealArray, dim::Int)
+    if x isa Dual
+        return dechain(getfield(x, :g), dim)
+    end
+    if  eltype(x) <: Real
         return x
-    elseif x isa Dual
-        return dechain(getfield(x, :g))
+    elseif eltype(x) <: Dual
+        return dechain(getfield.(x, :g), dim)
     elseif eltype(x) <: Vector
-        return hcat(x...)
+        x = cat(x...;dims = dim)
+        return dechain(x, dim)
     else
-        return dechain(getfield.(x, :g))
+        return dechain(getfield.(x, :g), dim)
     end
 end
+
+
+########
 
 function derivative(f::Function, x::DualRealArray, n::Int)
     return dechain(f(chain(x,n)))
@@ -109,11 +120,11 @@ function derivative(f::Function, x::DualRealArray)
 end
 
 function gradient(f::Function, x::AbstractArray)
-    return dechain(f(chain(x,1)))
+    return dechain(f(chain(x,1)), 1)
 end
 
 function gradient(f::Function, x::AbstractArray, n::Int)
-    return dechain(f(chain(x,n)))
+    return dechain(f(chain(x, n)), n)
 end
 
 function hessian(f::Function, x::AbstractArray)
@@ -123,33 +134,72 @@ end
 
 ### to do: change gradient function and DualArray functions (with gradients no support yet)
 
-
-
 t = rand(4)
-f(t) = sum(exp(t'*t)*2 .+ sin.(t))
+f(t) = sum(exp(t'*t)*2)
 
-hessian(f, t)
+eltype(gradient(f, t, 3)) <: Real
 
 using ForwardDiff
-ForwardDiff.hessian(f, t)
+
+gradient(f, t, 2)
+
+
+s = getfield.(cat(f(chain(t, 3)).g...;dims=3), :g)
+
+eltype(s) <: Vector
 
 
 
+ff = getfield.(f(chain(t, 3)), :g)
+fff = cat(getfield.(ff, :g)...;dims=3)
+ffff = getfield.(fff, :g)
 
-p = getfield.(getfield(f(chain(t, 3)), :g), :g)
-
-Array
-
-in(:g, fieldnames(p))
-
-p isa Array
-
-eltype(p) <: Real
+concatenator(ffff)
 
 
-k = getfield.(getfield(f(chain(t, 2)), :g), :g)
+function concatenator(x)
+    n = length(size(x))
+    mat = x
+    for i in 1:n-2
+        mat = mapslices(x -> cat(x...;dims = 1), x; dims = n - i)
+    end
+    return mat
+end
 
-getfield.(hcat(k...), :g)
+ffff(3)
+mapslices(x -> cat(x...;dims = 1), ffff; dims = 2)
 
-tt = getfield.(getfield(f(chain(t, 2)), :g), :g)
-s = hcat(t...)
+ffff
+
+
+
+c = getfield.(f(chain(t, 4)), :g)
+cc = getfield.(c, :g)
+ccc = cat(cc...;dims = 4)
+cccc = getfield.(ccc, :g)
+ccccc = cat(cc...;dims = 4)
+cccccc = getfield.(ccccc, :g)
+ccccccc = cat(cc...;dims = 4)
+cccccccc = getfield.(ccccccc, :g)
+oo = cat(cccccccc...;dims = 4)
+ooo = getfield.(oo, :g)
+
+
+cat(ooo[:,:,:,1,1]...;dims=2)
+
+
+me = concatenator(ooo)
+
+z(x) = mapslices(x -> cat(x...;dims = 2), x; dims = [1,2])
+
+ss = z(ooo)
+tt = z(ss)1
+z(tt)
+
+ooo
+
+cat(ooo...; dims = 4)
+
+rand(3,3,3,3)
+
+reshape(ss, (4,4,4,4))

@@ -2,10 +2,11 @@
 using Distributions, LinearAlgebra
 
 struct Dual{T} <: Number
-    f::Union{T, Dual}
+    f::Union{T, NTuple{2, Dual{T}}}
     g::Union{T, AbstractArray}
 end
 
+DualRealArray = Union{Dual, Real, AbstractArray}
 DualandReal = Union{Dual, Real}
 
 ### Differentiation rules via overloading ###
@@ -35,8 +36,13 @@ Base.cos(x::Dual) = Dual(cos(x.f), -sin(x.f)*x.g)
 
 Distributions.cdf(d, x::Dual) = Dual(cdf(d, x.f), pdf(d, x.f) * x.g)
 Base.adjoint(x::Dual) = Dual(adjoint(x.f), adjoint(x.g))
+LinearAlgebra.Adjoint(x::Dual) = Dual(LinearAlgebra.Adjoint(x.f), LinearAlgebra.Adjoint(x.g))
 LinearAlgebra.dot(x::Dual, y::Dual) = Dual(dot(x.f,y.f), x.f * y.g + y.f * x.g)
-Base.zero(x::Dual) = Dual(zero(x.f), zero(x.g))
+# Base.zero(x::Dual) = Dual(zero(x.f), zero(x.g))
+
+
+Base.zero(x::Dual) = zero(x.f)
+
 Base.one(x::Dual) = one(x.f)
 ### conversion, promotion rules ###
 convert(::Type{Dual}, x::Real) = Dual(x, one(x))
@@ -45,7 +51,7 @@ convert(::Type{Array}, x::Real) = [x]
 Dual(x) = convert(Dual, x)
 promote_rule(::Type{Dual}, ::Type{<:Number}) = Dual
 
-function DualArray(x)
+function DualArray(x::AbstractArray)
     l = length(x)
     eye = I(l)
     collect = []
@@ -66,18 +72,84 @@ function chain(x::DualandReal, n::Int)
     end
 end
 
+function chain(x::AbstractArray, n::Int)
+    if n == 1
+        return DualArray(x)
+    else
+        return chain(DualArray(x), n-1)
+    end
+end
+
 function dechain(x::DualandReal)
     if x isa Real
         return x
     else
-        return dechain(x.g[1])
+        return dechain(x.g)
     end
 end
 
-function derivative(f::Function, x::Real, n::Int)
+function dechain(x::AbstractArray)
+    if eltype(x) <: Real
+        return x
+    elseif x isa Dual
+        return dechain(getfield(x, :g))
+    elseif eltype(x) <: Vector
+        return hcat(x...)
+    else
+        return dechain(getfield.(x, :g))
+    end
+end
+
+function derivative(f::Function, x::DualRealArray, n::Int)
     return dechain(f(chain(x,n)))
 end
 
-function derivative(f::Function, x::Real)
+function derivative(f::Function, x::DualRealArray)
     return dechain(f(chain(x,1)))
 end
+
+function gradient(f::Function, x::AbstractArray)
+    return dechain(f(chain(x,1)))
+end
+
+function gradient(f::Function, x::AbstractArray, n::Int)
+    return dechain(f(chain(x,n)))
+end
+
+function hessian(f::Function, x::AbstractArray)
+    return dechain(f(chain(x, 2)))
+end
+
+
+### to do: change gradient function and DualArray functions (with gradients no support yet)
+
+
+
+t = rand(4)
+f(t) = sum(exp(t'*t)*2 .+ sin.(t))
+
+hessian(f, t)
+
+using ForwardDiff
+ForwardDiff.hessian(f, t)
+
+
+
+
+p = getfield.(getfield(f(chain(t, 3)), :g), :g)
+
+Array
+
+in(:g, fieldnames(p))
+
+p isa Array
+
+eltype(p) <: Real
+
+
+k = getfield.(getfield(f(chain(t, 2)), :g), :g)
+
+getfield.(hcat(k...), :g)
+
+tt = getfield.(getfield(f(chain(t, 2)), :g), :g)
+s = hcat(t...)

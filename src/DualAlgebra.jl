@@ -107,7 +107,6 @@ function dechain(x::DualRealArray, dim::Int)
     end
 end
 
-
 derivative(f::Function, x::DualandReal, n::Int) = dechain(f.(chain([x],n)), 1)[1]
 derivative(f::Function, x::DualandReal) = dechain(f.(chain([x],1)), 1)[1]
 gradient(f::Function, x::AbstractArray) = dechain(f(chain(x,1)), 1)
@@ -118,14 +117,25 @@ hessian(f::Function, x::AbstractArray) = dechain(f(chain(x, 2)))
 
 
 t = rand(4)
-f(t) = exp(t'*t)
+f(t) = sum(t'*t)
 g(x) = exp(x*2)
 
 
 
-gradient(f, t, 5)
+gradient(f, t, 3)
 
-@time derivative(g, 3, 4)
+@time derivative(f, q, 1)
 
-ForwardDiff.hessian(f, t)
-# Dual(Dual(3), 1) fix Dual numbers next!
+using ForwardDiff
+
+ForwardDiff.hessian(f, q)
+
+
+
+q = rand(4,2)
+
+f(q)
+
+Dual(q)
+
+q

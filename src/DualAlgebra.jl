@@ -95,8 +95,10 @@ end
 function dechain(x::DualRealArray, dim::Int)
     if x isa Dual
         return dechain(getfield(x, :g), dim)
-    end
-    if  eltype(x) <: Real
+    elseif eltype(x) <: Real
+        l = size(x, 1)
+        ar = Int.(ones(dim).*l)
+        x = reshape(x, tuple(ar...)...)
         return x
     elseif eltype(x) <: Dual
         return dechain(getfield.(x, :g), dim)
@@ -135,71 +137,8 @@ end
 ### to do: change gradient function and DualArray functions (with gradients no support yet)
 
 t = rand(4)
-f(t) = sum(exp(t'*t)*2)
-
-eltype(gradient(f, t, 3)) <: Real
-
-using ForwardDiff
-
-gradient(f, t, 2)
-
-
-s = getfield.(cat(f(chain(t, 3)).g...;dims=3), :g)
-
-eltype(s) <: Vector
+f(t) = exp(t'*t)
 
 
 
-ff = getfield.(f(chain(t, 3)), :g)
-fff = cat(getfield.(ff, :g)...;dims=3)
-ffff = getfield.(fff, :g)
-
-concatenator(ffff)
-
-
-function concatenator(x)
-    n = length(size(x))
-    mat = x
-    for i in 1:n-2
-        mat = mapslices(x -> cat(x...;dims = 1), x; dims = n - i)
-    end
-    return mat
-end
-
-ffff(3)
-mapslices(x -> cat(x...;dims = 1), ffff; dims = 2)
-
-ffff
-
-
-
-c = getfield.(f(chain(t, 4)), :g)
-cc = getfield.(c, :g)
-ccc = cat(cc...;dims = 4)
-cccc = getfield.(ccc, :g)
-ccccc = cat(cc...;dims = 4)
-cccccc = getfield.(ccccc, :g)
-ccccccc = cat(cc...;dims = 4)
-cccccccc = getfield.(ccccccc, :g)
-oo = cat(cccccccc...;dims = 4)
-ooo = getfield.(oo, :g)
-
-
-cat(ooo[:,:,:,1,1]...;dims=2)
-
-
-me = concatenator(ooo)
-
-z(x) = mapslices(x -> cat(x...;dims = 2), x; dims = [1,2])
-
-ss = z(ooo)
-tt = z(ss)1
-z(tt)
-
-ooo
-
-cat(ooo...; dims = 4)
-
-rand(3,3,3,3)
-
-reshape(ss, (4,4,4,4))
+p = gradient(f, t, 4)

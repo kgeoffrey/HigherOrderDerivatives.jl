@@ -111,31 +111,6 @@ derivative(f::Function, x::DualandReal, n::Int) = dechain(f.(chain([x],n)), 1)[1
 derivative(f::Function, x::DualandReal) = dechain(f.(chain([x],1)), 1)[1]
 gradient(f::Function, x::AbstractArray) = dechain(f(chain(x,1)), 1)
 gradient(f::Function, x::AbstractArray, n::Int) = dechain(f(chain(x, n)), n)
-hessian(f::Function, x::AbstractArray) = dechain(f(chain(x, 2)))
+hessian(f::Function, x::AbstractArray) = dechain(f(chain(x, 2)), 2)
 
-
-
-
-t = rand(4)
-f(t) = sum(t'*t)
-g(x) = exp(x*2)
-
-
-
-gradient(f, t, 3)
-
-@time derivative(f, q, 1)
-
-using ForwardDiff
-
-ForwardDiff.hessian(f, q)
-
-
-
-q = rand(4,2)
-
-f(q)
-
-Dual(q)
-
-q
+## to do, add support for multi dimensional arrays (change dual array function)

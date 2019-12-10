@@ -1,10 +1,7 @@
 # HigherOrderDerivatives
-Automatic higher order differentiation of generic julia Functions via dual numbers.
+Automatic higher order differentiation of generic Julia Functions. This repository contains an original implementation of (forward) automatic differentiation via dual numbers. Higher order derivatives are obtained by recursively chaining duals numbers together.
 
-Install the package by using the Julia package manager:
-```julia
-Pkg.add("HigherOrderDerivatives")
-```
+
 ## Example:
 
 ```julia

@@ -34,6 +34,11 @@ Base.log(x::Dual) = Dual(log(x.f), x.g/x.f)
 Base.sin(x::Dual) = Dual(sin(x.f), cos(x.f)*x.g)
 Base.cos(x::Dual) = Dual(cos(x.f), -sin(x.f)*x.g)
 
+Base.abs(x::Dual) = sqrt(abs2(x))
+Base.abs2(x::Dual) = real(conj(x)*x)
+Base.conj(x::Dual) = Dual(conj(x.f) , conj(x.g))
+Base.real(x::Dual) = Dual(real(x.f) , real(x.g))
+
 Distributions.cdf(d, x::Dual) = Dual(cdf(d, x.f), pdf(d, x.f) * x.g)
 Base.adjoint(x::Dual) = Dual(adjoint(x.f), adjoint(x.g))
 LinearAlgebra.Adjoint(x::Dual) = Dual(LinearAlgebra.Adjoint(x.f), LinearAlgebra.Adjoint(x.g))

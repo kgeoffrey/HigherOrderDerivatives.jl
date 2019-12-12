@@ -2,3 +2,10 @@ name = "HigherOrderDerivatives"
 uuid = "c8fd0db2-566d-4870-b0fd-1c038e266d70"
 authors = ["Geoffrey Kasebacher <gkasenbacher@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+Distributions ="31c24e10-a181-5473-b8eb-7969acd0382f"
+
+[compat]
+Distributions "0.21.11"
+julia = "1.2"

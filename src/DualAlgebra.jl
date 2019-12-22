@@ -45,6 +45,9 @@ LinearAlgebra.Adjoint(x::Dual) = Dual(LinearAlgebra.Adjoint(x.f), LinearAlgebra.
 LinearAlgebra.dot(x::Dual, y::Dual) = Dual(dot(x.f,y.f), x.f * y.g + y.f * x.g)
 # Base.zero(x::Dual) = Dual(zero(x.f), zero(x.g))
 
+Base.isless(z::Dual,w::Dual) = z.f < w.f
+Base.isless(z::Real,w::Dual) = z < w.f
+Base.isless(z::Dual,w::Real) = z.f < w
 
 Base.zero(x::Dual) = zero(x.f)
 

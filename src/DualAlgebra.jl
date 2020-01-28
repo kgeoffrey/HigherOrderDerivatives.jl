@@ -12,7 +12,7 @@ DualandReal = Union{Dual, Real}
 ### Differentiation rules via overloading ###
 import Base: +,/,*,-,^,adjoint, convert, promote_rule
 import Base: +,/,*,-,^, convert, promote_rule
-+(x::Dual, y::Dual) = Dual(x.f + y.f, x.g + y.g)
++(x::Dual, y::Dual) = Dual(x.f .+ y.f, x.g .+ y.g)
 +(x::Dual, y::Real) = Dual(x.f + y, x.g)
 +(y::Real, x::Dual) = Dual(x.f + y, x.g)
 -(x::Dual, y::Dual) = Dual(x.f - y.f, x.g - y.g)
@@ -122,3 +122,105 @@ gradient(f::Function, x::AbstractArray, n::Int) = dechain(f(chain(x, n)), n)
 hessian(f::Function, x::AbstractArray) = dechain(f(chain(x, 2)), 2)
 
 ## to do, add support for multi dimensional arrays (change dual array function)
+
+using ForwardDiff
+using BenchmarkTools
+
+function fillerq(x::AbstractArray)
+
+    m, n  = size(x)
+    collect = Array{Dual,2}(undef, m, n)
+
+    A = zeros(Float64, m, n)
+
+    for i in eachindex(x)
+        addone!(A, i)
+        collectt!(collect, x, i, A)
+        setzero!(A, i)
+    end
+
+    return collect
+    #return collect
+end
+
+
+function addone!(A, i)
+    A[i] = 1.0
+    return A
+end
+
+function collectt!(mat, x, i, A)
+    mat[i] = Dual(x[i], A)
+    return collect
+end
+
+function setzero!(A, i)
+    A[i] = 0.0
+    return A
+end
+
+
+t = rand(2, 2)
+
+@btime fillerq(t)
+
+
+pe = fillerq(t)
+
+sum(pe[1].g)
+
+
+f(x) = sum((x).*x)
+
+
+##################
+
+using SparseArrays
+
+function pepe(x::AbstractArray)
+    m, n  = size(x)
+    col = Array{Dual}(undef, m, n)
+    #col = zeros(Dual, m, n)
+    A = zeros(m, n)
+    #D(f,g) = Dual(f, g)
+    for i in eachindex(col)
+        #A = zeros(m, n)
+        A[i] = 1.0
+        #print(A)
+        col[i] = Dual(x[i], copy(A))
+        A[i] = 0
+    end
+
+    return col
+end
+
+t = rand(100,100)
+@time s = pepe(t)
+
+struct Store{N}
+   A::Array{Float64,N}
+end
+
+function Base.getindex(store::Store, I...)
+   B = spzeros(size(store.A)...)
+   B[I...] = 1.0
+   return store.A[I...], B
+end
+
+@time n = Store(t)[1]
+
+
+
+function hm(x)
+    m, n = size(x)
+    X = Store(x)
+    col = Array{Tuple}(undef, m, n)
+    for i in eachindex(x)
+        col[i] = X[i]
+    end
+    return col
+end
+
+@time s = hm(t)
+
+@time transpose(Store(t)[2][2]) * Store(t)[100][2]

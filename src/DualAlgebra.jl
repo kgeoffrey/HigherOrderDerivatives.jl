@@ -194,7 +194,7 @@ function pepe(x::AbstractArray)
     return col
 end
 
-t = rand(100,100)
+t = rand(1000)
 @time s = pepe(t)
 
 struct Store{N}
@@ -202,25 +202,40 @@ struct Store{N}
 end
 
 function Base.getindex(store::Store, I...)
-   B = spzeros(size(store.A)...)
+   #B = spzeros(size(store.A)...)
+   B = zeros(size(store.A)...)
    B[I...] = 1.0
    return store.A[I...], B
 end
 
-@time n = Store(t)[1]
+@time n = Store(t)
 
 
 
 function hm(x)
-    m, n = size(x)
+    #m, n = size(x)
     X = Store(x)
-    col = Array{Tuple}(undef, m, n)
+    col = Array{Dual}(undef, size(x)...)
     for i in eachindex(x)
-        col[i] = X[i]
+        col[i] = Dual(X[i]...)
     end
     return col
 end
 
 @time s = hm(t)
 
-@time transpose(Store(t)[2][2]) * Store(t)[100][2]
+
+
+
+f(x) = sum(transpose(x)*x)
+
+@time f(s).g
+
+using ForwardDiff
+
+@time ForwardDiff.gradient(f, t)
+
+
+@time 12000. * rand(100)
+
+@time [12000.0] .* rand(100)

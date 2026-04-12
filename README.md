@@ -1,5 +1,7 @@
 # HigherOrderDerivatives
-Automatic higher order differentiation of generic Julia Functions. This repository contains an original implementation of (forward) automatic differentiation via dual numbers. Higher order derivatives are obtained by recursively chaining dual numbers together.
+Higher-order forward-mode automatic differentiation for Julia functions. This package uses recursively nested dual numbers: each additional dual layer tracks one more derivative order.
+
+The current vector API is intended for scalar-valued functions on `AbstractVector` inputs. Higher-order derivatives grow as dense tensors, so runtime and memory both scale quickly with input dimension and derivative order.
 
 
 ## Example:
@@ -18,13 +20,15 @@ julia> D(0.8)
 julia> D⁹(0.8)
 -2.982695656166806e6
 
-julia> g(x::Vector) = exp(x'*x)
+julia> using LinearAlgebra
+
+julia> g(x::Vector) = exp(dot(x, x))
 
 julia> test = ones(4)
 
 julia> grad = x -> gradient(g, x); # returns the gradient
 julia> hess = x -> hessian(g, x); # hessian
-julia> higher_grad = x,y -> gradient(g, x, y) ## returns the yth order gradient
+julia> higher_grad = (x, y) -> gradient(g, x, y) ## returns the yth-order derivative tensor
 
 julia> higher_grad(test, 3)
 

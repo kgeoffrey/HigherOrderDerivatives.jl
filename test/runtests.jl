@@ -1,4 +1,5 @@
 using Test
+using Distributions
 using LinearAlgebra
 using HigherOrderDerivatives
 
@@ -45,5 +46,15 @@ using HigherOrderDerivatives
         expected[2, 1, 2] = 2.0
         expected[2, 2, 1] = 2.0
         @test third == expected
+    end
+
+    @testset "clear errors for unsupported vector-output functions" begin
+        bad(x) = [x[1]^2, x[2]^2]
+        @test_throws ArgumentError gradient(bad, [1.0, 2.0])
+    end
+
+    @testset "optional Distributions extension" begin
+        normal = Normal()
+        @test derivative(x -> cdf(normal, x), 0.0) ≈ pdf(normal, 0.0)
     end
 end

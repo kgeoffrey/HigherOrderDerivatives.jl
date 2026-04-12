@@ -4,15 +4,22 @@ authors = ["Geoffrey Kasebacher <gkasenbacher@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-Distributions ="31c24e10-a181-5473-b8eb-7969acd0382f"
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
+[weakdeps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+
+[extensions]
+HigherOrderDerivativesDistributionsExt = "Distributions"
+
 [compat]
-Distributions = "0.21 - 0.25"
-julia = "1.6"
+Distributions = "0.25"
+julia = "1.9"
 
 [extras]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Distributions", "Test"]

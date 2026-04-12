@@ -1,4 +1,4 @@
-using Distributions, LinearAlgebra
+using LinearAlgebra
 
 struct Dual{P,T} <: Real
     value::P
@@ -24,6 +24,7 @@ Base.abs2(x::Dual) = real(conj(x) * x)
 Base.conj(x::Dual) = Dual(conj(x.value), conj(x.tangent))
 Base.real(x::Dual) = Dual(real(x.value), real(x.tangent))
 Base.adjoint(x::Dual) = Dual(adjoint(x.value), adjoint(x.tangent))
+Base.show(io::IO, x::Dual) = print(io, "Dual(value=", x.value, ", tangent=", x.tangent, ")")
 
 Base.isless(x::Dual, y::Dual) = x.value < y.value
 Base.isless(x::Real, y::Dual) = x < y.value
@@ -65,8 +66,6 @@ Base.log(x::Dual) = Dual(log(x.value), x.tangent / x.value)
 Base.sin(x::Dual) = Dual(sin(x.value), cos(x.value) * x.tangent)
 Base.cos(x::Dual) = Dual(cos(x.value), -sin(x.value) * x.tangent)
 
-Distributions.cdf(d, x::Dual) = Dual(cdf(d, x.value), pdf(d, x.value) * x.tangent)
-
 function LinearAlgebra.dot(x::AbstractVector{<:Dual}, y::AbstractVector{<:Dual})
     axes(x) == axes(y) || throw(DimensionMismatch("vectors must have matching axes"))
     isempty(x) && throw(ArgumentError("dot requires a non-empty vector"))
@@ -79,6 +78,11 @@ function LinearAlgebra.dot(x::AbstractVector{<:Dual}, y::AbstractVector{<:Dual})
     return accumulator
 end
 
+"""
+    variable(x)
+
+Seed `x` as an active differentiation variable with tangent one.
+"""
 function variable(x::ScalarInput)
     return Dual(x, one(x))
 end
@@ -99,6 +103,12 @@ function DualArray(x::AbstractVector)
     return [Dual(x[index], unit_tangent(x[index], length(x), index)) for index in eachindex(x)]
 end
 
+"""
+    chain(x, order)
+
+Wrap `x` in `order` layers of dual numbers so evaluating a function on the result
+tracks derivatives up to that order.
+"""
 function chain(x::ScalarInput, order::Integer)
     order < 1 && throw(ArgumentError("derivative order must be at least 1"))
 
@@ -124,6 +134,14 @@ end
 dechain(x::Real) = x
 dechain(x::Dual) = dechain(x.tangent)
 
+function require_scalar_output(result, api_name::AbstractString)
+    if result isa ScalarInput
+        return result
+    end
+
+    throw(ArgumentError("`$api_name` expects a scalar-output function when differentiating vector inputs"))
+end
+
 function dechain(x::Union{Dual,AbstractArray}, dim::Integer)
     dim < 1 && throw(ArgumentError("tensor order must be at least 1"))
     return tensorize(x, dim)
@@ -140,9 +158,28 @@ function tensorize(x::AbstractVector, dim::Integer)
     return cat(slices...; dims=dim)
 end
 
+"""
+    derivative(f, x)
+    derivative(f, x, order)
+
+Evaluate the first or `order`-th derivative of a scalar-input function `f` at `x`.
+"""
 derivative(f::Function, x::ScalarInput) = dechain(f(chain(x, 1)))
 derivative(f::Function, x::ScalarInput, order::Integer) = dechain(f(chain(x, order)))
 
-gradient(f::Function, x::AbstractVector) = dechain(f(chain(x, 1)), 1)
-gradient(f::Function, x::AbstractVector, order::Integer) = dechain(f(chain(x, order)), order)
-hessian(f::Function, x::AbstractVector) = dechain(f(chain(x, 2)), 2)
+"""
+    gradient(f, x)
+    gradient(f, x, order)
+
+Evaluate the gradient or dense `order`-th derivative tensor of a scalar-output
+function `f` on vector input `x`.
+"""
+gradient(f::Function, x::AbstractVector) = dechain(require_scalar_output(f(chain(x, 1)), "gradient"), 1)
+gradient(f::Function, x::AbstractVector, order::Integer) = dechain(require_scalar_output(f(chain(x, order)), "gradient"), order)
+
+"""
+    hessian(f, x)
+
+Evaluate the Hessian matrix of a scalar-output function `f` on vector input `x`.
+"""
+hessian(f::Function, x::AbstractVector) = dechain(require_scalar_output(f(chain(x, 2)), "hessian"), 2)

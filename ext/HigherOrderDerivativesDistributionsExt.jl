@@ -23,6 +23,10 @@ for distribution_type in _leaf_distribution_types(Distributions.ContinuousUnivar
             pdf(d, x.value) * x.tangent,
         )
     end
+
+    @eval function Distributions.cdf(d::$distribution_type, x::HigherOrderDerivatives.Jet)
+        throw(ArgumentError("high-order jet-based derivatives through `cdf` are not implemented yet"))
+    end
 end
 
 end

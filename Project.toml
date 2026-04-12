@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -16,6 +17,7 @@ HigherOrderDerivativesDistributionsExt = "Distributions"
 [compat]
 Distributions = "0.25"
 julia = "1.9"
+StaticArrays = "1"
 
 [extras]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"

@@ -1,16 +1,33 @@
 using Test
 using Distributions
 using LinearAlgebra
+using StaticArrays
 using HigherOrderDerivatives
 
 @testset "HigherOrderDerivatives" begin
     @testset "scalar derivatives" begin
         cubic(x::Real) = x^3 + 2x
         @test derivative(cubic, 4.0) == 50.0
+
+        @test derivative(x -> 7.0, 2.0) == 0.0
+        @test derivative(x -> 7.0, 2.0, 4) == 0.0
         @test derivative(x -> x^5, 2.0, 4) == 240.0
+        @test derivative(x -> x^7, 2.0, 5) == 10080.0
+        @test derivative(exp, 0.3, 8) ≈ exp(0.3) atol = 1e-12
+        @test derivative(sin, 0.4, 4) ≈ sin(0.4) atol = 1e-12
 
         f(x::Real) = exp(x^3 * cos(-x)^2 * sin(x))
         @test derivative(f, 0.8) ≈ 0.567190549030136 atol = 1e-12
+    end
+
+    @testset "jet path agrees with nested duals on smooth scalar functions" begin
+        f(x::Real) = exp(x^3 * cos(x)^2 * sin(x))
+        x = 0.37
+
+        for order in 2:6
+            nested = dechain(f(chain(x, order)))
+            @test derivative(f, x, order) ≈ nested atol = 1e-10 rtol = 1e-10
+        end
     end
 
     @testset "vector derivatives" begin
@@ -30,6 +47,17 @@ using HigherOrderDerivatives
         @test third[1, 1, 1] ≈ 20exp4
         @test third[1, 1, 2] ≈ 12exp4
         @test third[1, 2, 3] ≈ 8exp4
+
+        @test gradient(_ -> 5.0, x) == zeros(4)
+        @test hessian(_ -> 5.0, x) == zeros(4, 4)
+    end
+
+    @testset "small-vector tangents use StaticArrays" begin
+        small = chain([1.0, 2.0, 3.0], 1)
+        large = chain(collect(1.0:9.0), 1)
+
+        @test small[1].tangent isa SVector{3,Float64}
+        @test large[1].tangent isa Vector{Float64}
     end
 
     @testset "polynomial tensor structure" begin

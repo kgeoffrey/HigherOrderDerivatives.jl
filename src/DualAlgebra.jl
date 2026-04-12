@@ -1,4 +1,5 @@
 using LinearAlgebra
+using StaticArrays
 
 struct Dual{P,T} <: Real
     value::P
@@ -6,6 +7,7 @@ struct Dual{P,T} <: Real
 end
 
 const ScalarInput = Union{Dual,Real}
+const STATIC_TANGENT_CUTOFF = 8
 
 primal(x::Real) = x
 primal(x::Dual) = primal(x.value)
@@ -87,7 +89,17 @@ function variable(x::ScalarInput)
     return Dual(x, one(x))
 end
 
+constant_like(seed::Real, value::Real) = value
+constant_like(seed::Dual, value::Real) = Dual(constant_like(seed.value, value), zerolike(seed.tangent))
+
+active_scalar_output(result::Dual, seed) = result
+active_scalar_output(result::Real, seed) = constant_like(seed, result)
+
 function unit_tangent(sample, length::Int, active::Int)
+    if length <= STATIC_TANGENT_CUTOFF
+        return static_unit_tangent(sample, Val(length), active)
+    end
+
     basis = Vector{typeof(one(sample))}(undef, length)
     off_diagonal = zero(sample)
     on_diagonal = one(sample)
@@ -97,6 +109,12 @@ function unit_tangent(sample, length::Int, active::Int)
     end
 
     return basis
+end
+
+function static_unit_tangent(sample, ::Val{N}, active::Int) where {N}
+    off_diagonal = zero(sample)
+    on_diagonal = one(sample)
+    return SVector{N,typeof(on_diagonal)}(ntuple(index -> index == active ? on_diagonal : off_diagonal, N))
 end
 
 function DualArray(x::AbstractVector)
@@ -158,14 +176,17 @@ function tensorize(x::AbstractVector, dim::Integer)
     return cat(slices...; dims=dim)
 end
 
-"""
-    derivative(f, x)
-    derivative(f, x, order)
+function scalar_derivative_via_duals(f::Function, x::ScalarInput)
+    seeded = chain(x, 1)
+    return dechain(active_scalar_output(f(seeded), seeded))
+end
 
-Evaluate the first or `order`-th derivative of a scalar-input function `f` at `x`.
-"""
-derivative(f::Function, x::ScalarInput) = dechain(f(chain(x, 1)))
-derivative(f::Function, x::ScalarInput, order::Integer) = dechain(f(chain(x, order)))
+function vector_tensor(f::Function, x::AbstractVector, order::Integer, api_name::AbstractString)
+    seeded = chain(x, order)
+    isempty(seeded) && throw(ArgumentError("`$api_name` does not support empty vectors"))
+    result = require_scalar_output(f(seeded), api_name)
+    return dechain(active_scalar_output(result, first(seeded)), order)
+end
 
 """
     gradient(f, x)
@@ -174,12 +195,12 @@ derivative(f::Function, x::ScalarInput, order::Integer) = dechain(f(chain(x, ord
 Evaluate the gradient or dense `order`-th derivative tensor of a scalar-output
 function `f` on vector input `x`.
 """
-gradient(f::Function, x::AbstractVector) = dechain(require_scalar_output(f(chain(x, 1)), "gradient"), 1)
-gradient(f::Function, x::AbstractVector, order::Integer) = dechain(require_scalar_output(f(chain(x, order)), "gradient"), order)
+gradient(f::Function, x::AbstractVector) = vector_tensor(f, x, 1, "gradient")
+gradient(f::Function, x::AbstractVector, order::Integer) = vector_tensor(f, x, order, "gradient")
 
 """
     hessian(f, x)
 
 Evaluate the Hessian matrix of a scalar-output function `f` on vector input `x`.
 """
-hessian(f::Function, x::AbstractVector) = dechain(require_scalar_output(f(chain(x, 2)), "hessian"), 2)
+hessian(f::Function, x::AbstractVector) = vector_tensor(f, x, 2, "hessian")

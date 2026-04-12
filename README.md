@@ -6,6 +6,11 @@ The package is intentionally small and predictable:
 - scalar derivatives for scalar-input functions via `derivative`
 - gradients, Hessians, and dense higher-order derivative tensors for scalar-output functions on vector inputs via `gradient` and `hessian`
 
+Under the hood:
+- first-order scalar derivatives use dual numbers
+- higher-order scalar derivatives use truncated Taylor jets
+- small vector tangents use `StaticArrays` to reduce allocation pressure
+
 ## Installation
 
 ```julia
@@ -75,6 +80,8 @@ julia> derivative(x -> cdf(Normal(), x), 0.0)
 0.3989422804014327
 ```
 
+At the moment, the optional `Distributions.cdf` extension is only implemented for first-order differentiation.
+
 ## API
 
 ```julia
@@ -93,6 +100,7 @@ hessian(f, x)
 - Vector APIs assume `f(x)` is scalar-valued.
 - Higher-order tensors scale quickly in both memory and runtime as input dimension and derivative order increase.
 - The implementation is designed to be small, readable, and dependable rather than competitive with industrial AD systems on large problems.
+- Very high-order scalar derivatives of arbitrary functions are supported through the jet backend, but optional library extensions may still provide only first-order rules.
 
 ## Development
 

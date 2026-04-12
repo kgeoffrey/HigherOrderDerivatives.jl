@@ -1,52 +1,111 @@
-# HigherOrderDerivatives
-Automatic higher order differentiation of generic Julia Functions. This repository contains an original implementation of (forward) automatic differentiation via dual numbers. Higher order derivatives are obtained by recursively chaining dual numbers together.
+# HigherOrderDerivatives.jl
 
+Higher-order forward-mode automatic differentiation for Julia functions using recursively nested dual numbers.
 
-## Example:
+The package is intentionally small and predictable:
+- scalar derivatives for scalar-input functions via `derivative`
+- gradients, Hessians, and dense higher-order derivative tensors for scalar-output functions on vector inputs via `gradient` and `hessian`
+
+Under the hood:
+- first-order scalar derivatives use dual numbers
+- higher-order scalar derivatives use truncated Taylor jets
+- small vector tangents use `StaticArrays` to reduce allocation pressure
+
+## Installation
+
+```julia
+pkg> add HigherOrderDerivatives
+```
+
+The core package depends only on Julia's standard `LinearAlgebra` library.
+
+If you also want automatic differentiation through `Distributions.cdf`, install `Distributions` as well:
+
+```julia
+pkg> add Distributions
+```
+
+The extension will load automatically when both packages are present.
+
+## Quick Start
 
 ```julia
 julia> using HigherOrderDerivatives
 
-julia> f(x::Real) = exp(x^3 * cos(-x)^2 * sin(x));
+julia> f(x::Real) = exp(x^3 * cos(-x)^2 * sin(x))
 
-julia> D = x -> derivative(f, x); # gives first derivative
-julia> D⁹ = x -> derivative(f, x, 9); # gives 9th derivative
-
-julia> D(0.8)
+julia> derivative(f, 0.8)
 0.567190549030136
 
-julia> D⁹(0.8)
+julia> derivative(f, 0.8, 9)
 -2.982695656166806e6
+```
 
-julia> g(x::Vector) = exp(x'*x)
+```julia
+julia> using HigherOrderDerivatives, LinearAlgebra
 
-julia> test = ones(4)
+julia> g(x::AbstractVector) = exp(dot(x, x))
 
-julia> grad = x -> gradient(g, x); # returns the gradient
-julia> hess = x -> hessian(g, x); # hessian
-julia> higher_grad = x,y -> gradient(g, x, y) ## returns the yth order gradient
+julia> x = ones(4)
+4-element Vector{Float64}:
+ 1.0
+ 1.0
+ 1.0
+ 1.0
 
-julia> higher_grad(test, 3)
+julia> gradient(g, x)
+4-element Vector{Float64}:
+ 109.19630006628847
+ 109.19630006628847
+ 109.19630006628847
+ 109.19630006628847
 
-4x4x4 Array{Float64,3}:
-[1091.9630006628847 655.1778003977308 655.1778003977308 655.1778003977308;
-655.1778003977308 655.1778003977308 436.7852002651539 436.7852002651539;
-655.1778003977308 436.7852002651539 655.1778003977308 436.7852002651539;
-655.1778003977308 436.7852002651539 436.7852002651539 655.1778003977308]
+julia> hessian(g, x)
+4×4 Matrix{Float64}:
+ 327.589  218.393  218.393  218.393
+ 218.393  327.589  218.393  218.393
+ 218.393  218.393  327.589  218.393
+ 218.393  218.393  218.393  327.589
 
-[655.1778003977308 655.1778003977308 436.7852002651539 436.7852002651539;
-655.1778003977308 1091.9630006628847 655.1778003977308 655.1778003977308;
-436.7852002651539 655.1778003977308 655.1778003977308 436.7852002651539;
-436.7852002651539 655.1778003977308 436.7852002651539 655.1778003977308]
+julia> size(gradient(g, x, 3))
+(4, 4, 4)
+```
 
-[655.1778003977308 436.7852002651539 655.1778003977308 436.7852002651539;
-436.7852002651539 655.1778003977308 655.1778003977308 436.7852002651539;
-655.1778003977308 655.1778003977308 1091.9630006628847 655.1778003977308;
-436.7852002651539 436.7852002651539 655.1778003977308 655.1778003977308]
+## Optional `Distributions` Integration
 
-[655.1778003977308 436.7852002651539 436.7852002651539 655.1778003977308;
-436.7852002651539 655.1778003977308 436.7852002651539 655.1778003977308;
-436.7852002651539 436.7852002651539 655.1778003977308 655.1778003977308;
-655.1778003977308 655.1778003977308 655.1778003977308 1091.9630006628847]
+```julia
+julia> using HigherOrderDerivatives, Distributions
 
- ```
+julia> derivative(x -> cdf(Normal(), x), 0.0)
+0.3989422804014327
+```
+
+At the moment, the optional `Distributions.cdf` extension is only implemented for first-order differentiation.
+
+## API
+
+```julia
+derivative(f, x)
+derivative(f, x, order)
+gradient(f, x)
+gradient(f, x, order)
+hessian(f, x)
+```
+
+`gradient(f, x, order)` returns the dense `order`-th derivative tensor.
+
+## Scope and Limitations
+
+- Vector input support currently targets `AbstractVector` only.
+- Vector APIs assume `f(x)` is scalar-valued.
+- Higher-order tensors scale quickly in both memory and runtime as input dimension and derivative order increase.
+- The implementation is designed to be small, readable, and dependable rather than competitive with industrial AD systems on large problems.
+- Very high-order scalar derivatives of arbitrary functions are supported through the jet backend, but optional library extensions may still provide only first-order rules.
+
+## Development
+
+Run the test suite with:
+
+```julia
+julia --project -e 'using Pkg; Pkg.test()'
+```
